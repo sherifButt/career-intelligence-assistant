@@ -1,0 +1,68 @@
+# Coolify deployment for the Career Intelligence Assistant.
+#
+# Deploy as a "Docker Compose" resource pointing at this file. Coolify fills the
+# SERVICE_* magic variables automatically:
+#   - SERVICE_FQDN_APP_3000  → generates a public domain and routes it to app:3000
+#   - SERVICE_USER_POSTGRES / SERVICE_PASSWORD_POSTGRES → auto-generated DB creds
+#
+# You MUST set one secret in Coolify's Environment Variables before deploying:
+#   - OPENAI_API_KEY   (used for embeddings, chat, and job screening)
+#
+# First-run seeding (optional — the app also works with an empty corpus): the
+# built image ships the /seed corpus + scripts, so open a terminal on the `app`
+# container in Coolify and run:  pnpm seed
+# (idempotent — re-ingesting a same-named document replaces it).
+
+services:
+  app:
+    build: .
+    # Prefer a prebuilt image? Publish one and swap the line above for:
+    #   image: sherifbutt/career-intelligence-assistant:latest
+    environment:
+      # Coolify generates the public FQDN and proxies it to this service's :3000.
+      - SERVICE_FQDN_APP_3000
+      # App ↔ db over the internal compose network (service name `db`, port 5432).
+      - DATABASE_URL=postgres://$SERVICE_USER_POSTGRES:$SERVICE_PASSWORD_POSTGRES@db:5432/${POSTGRES_DB:-career_intelligence}
+      # Required secret — set this in Coolify's Environment Variables.
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # Provider abstraction + models (safe defaults; override in Coolify if needed).
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
+      # Stronger judge model for the once-per-ingest job screening.
+      - ANALYSIS_MODEL=${ANALYSIS_MODEL:-gpt-4o}
+      # Guardrail: minimum retrieval score before the model is called (empirical).
+      - RETRIEVAL_SCORE_THRESHOLD=${RETRIEVAL_SCORE_THRESHOLD:-0.25}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget -qO- http://127.0.0.1:3000/ || exit 1
+      interval: 10s
+      timeout: 20s
+      retries: 10
+      start_period: 40s
+
+  db:
+    # pgvector image (NOT plain postgres): the app stores embeddings in a `vector`
+    # column. db/init.sql runs once on first boot to CREATE EXTENSION vector and
+    # build the schema (documents + chunks, incl. the analysis jsonb column).
+    image: pgvector/pgvector:pg17
+    environment:
+      - POSTGRES_USER=$SERVICE_USER_POSTGRES
+      - POSTGRES_PASSWORD=$SERVICE_PASSWORD_POSTGRES
+      - POSTGRES_DB=${POSTGRES_DB:-career_intelligence}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}
+      interval: 5s
+      timeout: 20s
+      retries: 10
+
+volumes:
+  pgdata:
