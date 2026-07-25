@@ -15,9 +15,12 @@
 
 services:
   app:
-    build: .
-    # Prefer a prebuilt image? Publish one and swap the line above for:
-    #   image: sherifbutt/career-intelligence-assistant:latest
+    # Published by .github/workflows/publish-image.yml to GHCR. Make the package
+    # public (once) so Coolify can pull it, or add GHCR credentials in Coolify.
+    image: ghcr.io/sherifbutt/career-intelligence-assistant:latest
+    # Fallback — build from source instead of pulling: comment the image line
+    # above and uncomment this.
+    #build: .
     environment:
       # Coolify generates the public FQDN and proxies it to this service's :3000.
       - SERVICE_FQDN_APP_3000
