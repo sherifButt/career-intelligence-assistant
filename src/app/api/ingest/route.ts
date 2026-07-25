@@ -4,6 +4,7 @@ import {
   UnsupportedFileTypeError,
 } from "@/lib/rag/extract";
 import { ingestDocument } from "@/lib/rag/ingest";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 // Two ways in, one pipeline: JSON with pre-extracted text (seed script,
 // programmatic use) or multipart/form-data with a raw file (the upload
@@ -20,6 +21,14 @@ interface ParsedIngest {
 }
 
 export async function POST(req: NextRequest) {
+  const limit = rateLimit(`ingest:${clientIp(req)}`, 20, 60 * 60 * 1000);
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: "Rate limit reached — try again later." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSec) } },
+    );
+  }
+
   let parsed: ParsedIngest | NextResponse;
   try {
     parsed = req.headers.get("content-type")?.startsWith("multipart/form-data")

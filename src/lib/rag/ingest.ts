@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import {
   chunks,
   documents,
@@ -14,6 +14,9 @@ export interface IngestInput {
   name: string;
   docType: DocType;
   content: string;
+  /** Recruiter mode: scope this doc to an ephemeral session (auto-purged).
+   *  Omitted = the shared job-seeker corpus. */
+  sessionId?: string;
 }
 
 export interface IngestResult {
@@ -30,6 +33,7 @@ export async function ingestDocument({
   name,
   docType,
   content,
+  sessionId,
 }: IngestInput): Promise<IngestResult> {
   const pieces = chunkText(content);
   if (pieces.length === 0) {
@@ -42,10 +46,21 @@ export async function ingestDocument({
 
   const db = getDb();
   const result = await db.transaction(async (tx) => {
-    await tx.delete(documents).where(eq(documents.name, name));
+    // Same-name replace is scoped to the same session, so two recruiter
+    // sessions (or a session vs the shared corpus) can't delete each other.
+    await tx
+      .delete(documents)
+      .where(
+        and(
+          eq(documents.name, name),
+          sessionId
+            ? eq(documents.sessionId, sessionId)
+            : isNull(documents.sessionId),
+        ),
+      );
     const [doc] = await tx
       .insert(documents)
-      .values({ name, docType })
+      .values({ name, docType, sessionId: sessionId ?? null })
       .returning({ id: documents.id });
 
     await tx.insert(chunks).values(
@@ -61,23 +76,27 @@ export async function ingestDocument({
   });
 
   // Fit analysis happens after the transaction: it's an LLM call, and a
-  // failed screen must never roll back a successful ingest.
-  try {
-    if (docType === "job") {
-      result.analysis = await analyzeJobFit(content);
-      if (result.analysis) {
-        await db
-          .update(documents)
-          .set({ analysis: result.analysis })
-          .where(eq(documents.id, result.documentId));
+  // failed screen must never roll back a successful ingest. Recruiter session
+  // docs (sessionId set) are screened separately by the recruiter flow — the
+  // job-seeker auto-screen only runs for the shared corpus.
+  if (sessionId === undefined) {
+    try {
+      if (docType === "job") {
+        result.analysis = await analyzeJobFit(content);
+        if (result.analysis) {
+          await db
+            .update(documents)
+            .set({ analysis: result.analysis })
+            .where(eq(documents.id, result.documentId));
+        }
+      } else {
+        // A new résumé invalidates every job's screen — refresh them all.
+        // Linear in job count; trivial at this corpus size.
+        await reanalyzeAllJobs();
       }
-    } else {
-      // A new résumé invalidates every job's screen — refresh them all.
-      // Linear in job count; trivial at this corpus size.
-      await reanalyzeAllJobs();
+    } catch (err) {
+      console.error("[ingest] fit analysis failed (non-fatal):", err);
     }
-  } catch (err) {
-    console.error("[ingest] fit analysis failed (non-fatal):", err);
   }
 
   return result;
@@ -88,7 +107,9 @@ export async function reanalyzeAllJobs(): Promise<void> {
   const jobs = await db
     .select({ id: documents.id })
     .from(documents)
-    .where(eq(documents.docType, "job"));
+    // Shared corpus only — recruiter session jobs aren't screened vs the
+    // primary résumé.
+    .where(and(eq(documents.docType, "job"), isNull(documents.sessionId)));
 
   for (const job of jobs) {
     const jobChunks = await db

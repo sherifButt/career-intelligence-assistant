@@ -8,8 +8,9 @@ import {
   vector,
 } from "drizzle-orm/pg-core";
 
-// Recruiter-style screen of the résumé against one job, computed once when
-// the job is ingested (and refreshed when the résumé changes).
+// Recruiter-style screen of one résumé against one job. Job-seeker mode
+// stores it on the job row (résumé vs that job); Recruiter mode stores it on
+// each candidate résumé row (that candidate vs the chosen req).
 export interface JobAnalysis {
   /** 0–100 overall skills/experience match. */
   matchScore: number;
@@ -25,6 +26,10 @@ export interface JobAnalysis {
   missing?: string[];
   /** Overall verdict: is this application worth making as-is? */
   apply?: "yes" | "no";
+  /** The PART 1 written reasoning (per must-have evidence) — "shows the work". */
+  evidence?: string;
+  /** Recruiter mode: the job document this candidate was screened against. */
+  vsJobId?: number;
 }
 
 // Mirrors db/init.sql, which is the actual source of truth (it runs on first
@@ -36,6 +41,9 @@ export const documents = pgTable("documents", {
   name: text("name").notNull().unique(),
   docType: text("doc_type", { enum: ["resume", "job"] }).notNull(),
   analysis: jsonb("analysis").$type<JobAnalysis | null>(),
+  // Recruiter-mode candidate/req uploads are scoped to an ephemeral session
+  // and auto-purged; NULL means the shared job-seeker corpus.
+  sessionId: text("session_id"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

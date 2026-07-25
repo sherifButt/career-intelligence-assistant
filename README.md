@@ -101,6 +101,11 @@ Key behaviours you can verify in the UI:
   prep advice arrives grounded and cited, and the follow-up suggestions continue the prep
   conversation. (Deliberately routed to chat instead of a separate dialog: one answer
   surface, zero new backend.)
+- **Recruiter mode** (`/recruiter`) — the mirror of the job-seeker flow: paste one req,
+  drop in candidate résumés, and get a **ranked shortlist** where every fit score is backed
+  by the screen's own **cited reasoning** (the same anchored-rubric screen, run per
+  candidate). Ask grounded questions about any candidate against the req. Candidate résumés
+  are **session-scoped and auto-deleted after 24h** — never mixed into the shared corpus.
 - **Contextual follow-ups** — after each answer, the quick-question row regenerates: a small
   LLM call (fired after the answer renders, so it adds no latency) predicts the four most
   useful next questions from the last exchange and the loaded documents. Falls back to the

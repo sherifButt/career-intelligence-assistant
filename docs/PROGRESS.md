@@ -43,6 +43,39 @@ deliberately went further.
 - **Stop button** (client abort), **copy answer**, dark hover surfaces,
   various UX polish; a real flex `min-h-0` scroll bug found and fixed.
 
+## Recruiter mode — screen N résumés against one job
+
+The mirror of the job-seeker flow: paste a req, drop in candidate résumés, get a
+ranked shortlist where every score is backed by the screen's own cited reasoning.
+Built by inverting the calibrated screen — `screenFit(resumeText, jobText)`, the
+same anchored rubric + self-consistency, now direction-agnostic — rather than a
+second model, and by capturing the PART 1 evidence the job-seeker path discarded.
+
+- **Session isolation for candidate PII.** Recruiter uploads carry a `session_id`
+  (cookie-scoped, namespaced names), stay out of the shared corpus and job-seeker
+  fan-out, and auto-purge after 24h. `getResumeText(documentId?)` now targets one
+  résumé — fixing a latent bug where it concatenated every résumé doc.
+- **Bulk screening** uses median-of-2 (vs the job-seeker's median-of-3) for a
+  cost/stability balance; capped at 12 résumés per screen. `ANALYSIS_MODEL` stays
+  gpt-4o — mini fails this judge (see below), so cost is controlled elsewhere.
+- **Ask about a candidate.** Chat gained a `resumeDocumentId` scope, so a recruiter
+  can ask grounded, cited questions about one candidate against the req.
+
+## Public-launch hardening
+
+- In-memory per-IP rate limits (`src/lib/rate-limit.ts`) on `/api/chat`,
+  `/api/ingest`, `/api/recruiter/screen`, plus `max_tokens` output caps.
+- **The real cost ceiling is an ops step, not code:** fund OpenAI with **prepaid
+  credits + auto-recharge OFF** — the only true hard cap (the "monthly budget" is
+  just an alert) — and set a low billing-alert threshold. Rate limits blunt abuse;
+  the prepaid ceiling caps the worst-case bill.
+
+## Fast-follow (backlog)
+
+Chunk-level citation chips inside candidate evidence; audit-trail export (CSV/PDF)
+for defensibility; PDF/DOCX candidate upload (recruiter mode is paste/.txt today);
+Upstash rate limiting for multi-replica; parallelised bulk screening.
+
 ## Screening quality: three calibration rounds (the part worth reading)
 
 1. **Score clustering** — the first screen gave ~85% to every plausible job.

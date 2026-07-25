@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getLlmProvider } from "@/lib/llm/provider";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { estimateCostUSD } from "@/lib/observability/cost";
 import { logQuery } from "@/lib/observability/log";
 import { embedQuery } from "@/lib/rag/embed";
@@ -24,6 +25,14 @@ const PER_JOB_K = 2;
 const SCOPED_JOB_K = 4;
 
 export async function POST(req: NextRequest) {
+  const limit = rateLimit(`chat:${clientIp(req)}`, 40, 5 * 60 * 1000);
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: "Rate limit reached — try again shortly." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSec) } },
+    );
+  }
+
   let body: unknown;
   try {
     body = await req.json();
@@ -31,7 +40,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { question, jobDocumentId } = (body ?? {}) as Record<string, unknown>;
+  const { question, jobDocumentId, resumeDocumentId } = (body ?? {}) as Record<
+    string,
+    unknown
+  >;
   if (typeof question !== "string" || !question.trim()) {
     return NextResponse.json(
       { error: "`question` must be a non-empty string" },
@@ -44,14 +56,19 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
   }
-  if (
-    jobDocumentId !== undefined &&
-    (typeof jobDocumentId !== "number" || !Number.isInteger(jobDocumentId))
-  ) {
-    return NextResponse.json(
-      { error: "`jobDocumentId` must be an integer document id" },
-      { status: 400 },
-    );
+  for (const [label, value] of [
+    ["jobDocumentId", jobDocumentId],
+    ["resumeDocumentId", resumeDocumentId],
+  ] as const) {
+    if (
+      value !== undefined &&
+      (typeof value !== "number" || !Number.isInteger(value))
+    ) {
+      return NextResponse.json(
+        { error: `\`${label}\` must be an integer document id` },
+        { status: 400 },
+      );
+    }
   }
 
   const queryId = randomUUID();
@@ -59,8 +76,16 @@ export async function POST(req: NextRequest) {
   const trimmed = question.trim();
 
   try {
+    // Recruiter candidate chat scopes the résumé side to one candidate doc and
+    // the job side to the session req (explicit ids); job-seeker mode validates
+    // the scope against the shared job list and fans out over all jobs.
+    const recruiterScoped = resumeDocumentId !== undefined;
     const jobDocs = await listJobDocuments();
-    if (jobDocumentId !== undefined && !jobDocs.some((d) => d.id === jobDocumentId)) {
+    if (
+      !recruiterScoped &&
+      jobDocumentId !== undefined &&
+      !jobDocs.some((d) => d.id === jobDocumentId)
+    ) {
       return NextResponse.json(
         { error: "`jobDocumentId` does not match a job document" },
         { status: 400 },
@@ -68,12 +93,20 @@ export async function POST(req: NextRequest) {
     }
 
     const queryEmbedding = await embedQuery(trimmed);
-    const [resumeChunks, ...perJobChunks] = await Promise.all([
-      retrieveByEmbedding(queryEmbedding, { docType: "resume", k: RESUME_K }),
-      ...(jobDocumentId !== undefined
+    const resumeSide = recruiterScoped
+      ? retrieveByEmbedding(queryEmbedding, {
+          documentId: resumeDocumentId as number,
+          k: RESUME_K,
+        })
+      : retrieveByEmbedding(queryEmbedding, {
+          docType: "resume",
+          k: RESUME_K,
+        });
+    const jobSide =
+      jobDocumentId !== undefined
         ? [
             retrieveByEmbedding(queryEmbedding, {
-              documentId: jobDocumentId,
+              documentId: jobDocumentId as number,
               k: SCOPED_JOB_K,
             }),
           ]
@@ -82,7 +115,10 @@ export async function POST(req: NextRequest) {
               documentId: d.id,
               k: PER_JOB_K,
             }),
-          )),
+          );
+    const [resumeChunks, ...perJobChunks] = await Promise.all([
+      resumeSide,
+      ...jobSide,
     ]);
     const retrieved = [...resumeChunks, ...perJobChunks.flat()];
 
@@ -129,10 +165,13 @@ export async function POST(req: NextRequest) {
     }
 
     const prompt = buildGroundedPrompt(trimmed, retrieved);
-    const completion = await getLlmProvider().complete([
-      { role: "system", content: prompt.system },
-      { role: "user", content: prompt.user },
-    ]);
+    const completion = await getLlmProvider().complete(
+      [
+        { role: "system", content: prompt.system },
+        { role: "user", content: prompt.user },
+      ],
+      { maxTokens: 1200 },
+    );
 
     // Chat-model cost only; the query-embedding cost is ~1000x smaller and
     // would show as $0.0000 anyway.
