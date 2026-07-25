@@ -1,0 +1,36 @@
+QA Engineer
+Northwind Health — Remote (US/EU)
+
+About Northwind Health
+Northwind Health is a health-technology company building software that clinical and operational teams rely on every day. When our products break, real workflows break with them — so quality is not an afterthought here. We are looking for a QA Engineer who treats test automation as a first-class engineering discipline.
+
+About the role
+As a QA Engineer, you will own the automated testing that keeps our web applications and APIs trustworthy release after release. You will design test strategy, build and maintain automated suites, and wire them into our continuous integration pipeline so that regressions are caught before they ever reach a customer. You will work closely with product engineers to make quality a shared responsibility, not a gate at the end.
+
+What you'll do
+- Design, build, and maintain end-to-end and integration test suites using Playwright and/or Cypress.
+- Expand automated API test coverage against our REST services, including auth, edge cases, and error handling.
+- Integrate test suites into CI so they run automatically on every pull request and deployment.
+- Triage failures, isolate flaky tests, and drive them to root cause with the engineering team.
+- Define and track quality metrics — coverage, flake rate, escaped defects — and report on release readiness.
+- Partner with developers to build testability into features from the start and to grow unit/component coverage.
+- Contribute to manual and exploratory testing for new or high-risk features where automation is not yet in place.
+
+Must-haves
+- 3+ years in a QA or software-in-test role, with test automation as your PRIMARY skill.
+- Strong hands-on experience with a modern browser automation framework (Playwright or Cypress).
+- Solid programming ability in JavaScript/TypeScript for writing and maintaining test code.
+- Experience integrating automated tests into a CI system (e.g. GitHub Actions, GitLab CI, CircleCI).
+- Practical API testing experience (REST), including tooling and assertions.
+- A rigorous, detail-oriented approach to reproducing, isolating, and documenting defects.
+- Clear written communication for bug reports and test plans.
+
+Nice-to-haves
+- Experience with performance or load testing tooling.
+- Familiarity with containerized test environments (Docker).
+- Exposure to accessibility testing.
+- Experience testing in a regulated or data-sensitive domain such as healthcare or fintech.
+- Some experience with contract testing or test data management.
+
+How to apply
+Email your resume/CV and a short note to careers@northwindhealth.example. If you have a favorite bug you once caught (or once wrote), tell us about it. We read every application.

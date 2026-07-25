@@ -1,0 +1,36 @@
+Forward Deployed Engineer
+Northwind Health — Remote (US/EU) with periodic on-site customer travel
+
+About Northwind Health
+Northwind Health builds software that helps hospitals, clinics, and payers make sense of messy clinical and operational data. Our products sit close to the people who actually deliver care, so the engineers who build them have to sit close too. We are a fast-moving health-technology company where shipping usable software beats shipping impressive slideware.
+
+About the role
+As a Forward Deployed Engineer, you are the bridge between our core product and the real-world environment of each customer. You will embed with a small number of healthcare organizations, understand their workflows and data, and build, configure, and integrate our platform so it delivers value in weeks, not quarters. This is a builder role with heavy customer contact: half product engineer, half trusted technical partner. You will write real production code, and you will also sit in the room (or on the call) with clinical and IT stakeholders to make sure what we ship actually fits.
+
+What you'll do
+- Own end-to-end delivery for a portfolio of customer deployments, from first integration to steady-state production use.
+- Build and extend full-stack features in TypeScript across our Next.js / React front end and Node.js services backed by Postgres.
+- Design and implement data integrations that pull from customer systems (HL7/FHIR feeds, flat-file exports, third-party APIs) and reshape them into our data model.
+- Work directly with customer stakeholders on-site and remotely to gather requirements, demo progress, and troubleshoot live issues.
+- Stand up and tune LLM/RAG-backed features (retrieval pipelines, prompt flows, evaluation) that summarize and surface clinical and operational information safely.
+- Deploy and operate customer environments on cloud infrastructure, handling configuration, monitoring, and incident response.
+- Feed hard-won field learnings back into the core product roadmap so the next deployment is easier than the last.
+
+Must-haves
+- 6+ years building and shipping production software, with strong depth in TypeScript full-stack product engineering (Next.js, React, Node.js, Postgres) as your PRIMARY skill.
+- Demonstrated experience working directly with external customers — running requirements sessions, doing on-site or hands-on deployment/integration work, and owning the relationship through go-live.
+- Working proficiency in Python for data wrangling, integration scripts, and glue between systems.
+- Hands-on experience with cloud infrastructure (AWS or GCP) — provisioning, deploying, and operating services, including infrastructure-as-code (Terraform) and containers/Kubernetes.
+- Practical experience building or integrating LLM/RAG features and reasoning about their reliability and limitations.
+- Comfort with ambiguity, incomplete data, and shifting requirements in a customer environment.
+- Willingness to travel periodically to customer sites (roughly 20-30%).
+
+Nice-to-haves
+- Prior experience in healthcare, health-tech, or another regulated/data-sensitive domain.
+- Familiarity with healthcare data standards such as HL7v2 or FHIR.
+- Experience with data pipelines or ETL/ELT tooling.
+- Background as a solutions engineer, sales engineer, or consultant in addition to core software engineering.
+- Exposure to observability tooling and production on-call practices.
+
+How to apply
+Send a short note and your resume/CV to careers@northwindhealth.example. Tell us about a time you shipped something directly alongside a customer and what you learned from being in the room. We review every application.

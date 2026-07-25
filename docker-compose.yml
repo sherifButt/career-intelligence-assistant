@@ -1,0 +1,37 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      # Inside the compose network the DB host is the service name, not localhost.
+      DATABASE_URL: postgres://postgres:postgres@db:5432/career_intelligence
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    # Official pgvector image — avoids installing the extension by hand.
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: career_intelligence
+    ports:
+      # Host port 5434 to avoid colliding with any local postgres on 5432.
+      - "5434:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Runs once on first boot: enables the vector extension and creates tables.
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d career_intelligence"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:

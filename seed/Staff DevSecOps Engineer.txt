@@ -1,0 +1,37 @@
+Staff DevSecOps Engineer
+Northwind Health — Remote (US/EU)
+
+About Northwind Health
+Northwind Health is a health-technology company building software trusted with sensitive data. Security and reliability are not features we bolt on — they are the foundation everything else stands on. We are hiring a Staff DevSecOps Engineer to lead how we build, secure, and operate our platform at scale.
+
+About the role
+As a Staff DevSecOps Engineer, you will own the intersection of platform engineering and security. You will design and harden the infrastructure our products run on, embed security into every stage of the software lifecycle, and set the technical standards that the rest of engineering follows. This is a senior individual-contributor role with broad influence: you will shape architecture, mentor engineers, and be a go-to authority on doing infrastructure and security right.
+
+What you'll do
+- Design, build, and operate secure, scalable cloud infrastructure using infrastructure-as-code.
+- Own our Kubernetes-based platform — cluster architecture, workload isolation, upgrades, and reliability.
+- Embed security into CI/CD pipelines: dependency and container scanning, secrets management, policy-as-code, and automated compliance checks.
+- Lead threat modeling and harden systems against realistic attack scenarios across cloud and application layers.
+- Define and enforce identity, access, and network security controls across environments.
+- Drive incident response and post-incident review for security and reliability events.
+- Set platform and security standards and mentor engineers in applying them.
+
+Must-haves
+- 8+ years in infrastructure, platform, or security engineering, with DevSecOps / platform engineering as your PRIMARY skill.
+- Deep hands-on experience operating Kubernetes in production.
+- Strong infrastructure-as-code expertise, especially Terraform.
+- Deep cloud experience on AWS or GCP, including cloud security services and best practices.
+- Proven experience securing CI/CD pipelines and the software supply chain (scanning, signing, secrets, policy-as-code).
+- Solid scripting/programming ability (e.g. Python and/or Go) for automation and tooling.
+- Working knowledge of security fundamentals — identity, network security, encryption, and threat modeling.
+- Experience leading incident response.
+
+Nice-to-haves
+- Experience with compliance frameworks relevant to healthcare or data-sensitive domains (e.g. SOC 2, HIPAA, ISO 27001).
+- Familiarity with service meshes, zero-trust networking, or eBPF-based tooling.
+- Experience with observability stacks (metrics, logs, tracing) at scale.
+- Contributions to open-source infrastructure or security tooling.
+- Relevant security or cloud certifications.
+
+How to apply
+Email your resume/CV and a short note about a system you made meaningfully more secure or reliable to careers@northwindhealth.example. We read every application.

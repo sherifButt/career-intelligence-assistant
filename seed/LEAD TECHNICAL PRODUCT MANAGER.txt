@@ -1,0 +1,36 @@
+Lead Technical Product Manager
+Northwind Health — Remote (US/EU)
+
+About Northwind Health
+Northwind Health is a health-technology company building tools that help care teams and administrators work smarter with their data. We are growing our product organization and looking for a Lead Technical Product Manager to own a core area of the platform end to end.
+
+About the role
+As Lead Technical Product Manager, you will set the direction for a significant product area, translate customer and market needs into a clear roadmap, and work shoulder-to-shoulder with engineering to deliver it. You will be the person who holds the "why" and the "what," making sharp prioritization calls and keeping a cross-functional team aligned around outcomes. This is a leadership role: you will mentor other PMs and set the standard for how product is done here.
+
+What you'll do
+- Own the vision, strategy, and roadmap for a core product area, grounded in customer needs and business goals.
+- Translate ambiguous problems into crisp, prioritized requirements and success metrics.
+- Work closely with engineering and design through the full lifecycle — discovery, delivery, launch, and iteration.
+- Talk regularly with customers and internal stakeholders to validate problems and pressure-test solutions.
+- Make and communicate hard trade-off and prioritization decisions, and bring the team along.
+- Define and monitor product metrics, using data to decide what to build next and what to stop.
+- Mentor product managers and help raise the bar for product craft across the team.
+
+Must-haves
+- 7+ years in product management, with technical product management as your PRIMARY skill and a track record of shipping complex software products.
+- Demonstrated product leadership — owning a meaningful area and influencing without direct authority.
+- Strong technical fluency: able to reason about APIs, data models, and system trade-offs and to earn the trust of senior engineers.
+- Excellent written and verbal communication, including crisp product narratives and clear decision-making.
+- Experience turning qualitative customer input and quantitative data into a defensible roadmap.
+- A history of driving measurable outcomes, not just shipping features.
+- Comfort operating with ambiguity and competing priorities.
+
+Nice-to-haves
+- Experience in healthcare, health-tech, or another regulated domain.
+- Familiarity with data-heavy or AI/ML-driven products.
+- Prior experience as an engineer, designer, or data professional before moving into product.
+- Experience mentoring or managing other product managers.
+- Exposure to enterprise or B2B software sales and delivery motions.
+
+How to apply
+Send your resume/CV and a brief note about a product decision you are proud of to careers@northwindhealth.example. We review every application.
