@@ -34,6 +34,7 @@ export class OpenAiProvider implements LlmProvider {
       // Low temperature: this is grounded analysis, not creative writing —
       // we want the same question to get roughly the same answer.
       temperature: options.temperature ?? 0.2,
+      ...(options.maxTokens ? { max_tokens: options.maxTokens } : {}),
     });
 
     return {

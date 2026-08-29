@@ -8,12 +8,17 @@ CREATE TABLE IF NOT EXISTS documents (
   id          serial PRIMARY KEY,
   name        text NOT NULL UNIQUE,
   doc_type    text NOT NULL CHECK (doc_type IN ('resume', 'job')),
-  -- For jobs: LLM fit analysis computed once at ingest
-  -- ({matchScore, risk, riskNote, seniority}); null for the resume or if
-  -- analysis failed.
+  -- LLM fit screen (jsonb): job-seeker mode stores it on the job row (résumé
+  -- vs that job); recruiter mode stores it on each candidate résumé row.
   analysis    jsonb,
+  -- Recruiter-mode uploads are scoped to an ephemeral session and auto-purged
+  -- after 24h; NULL means the shared job-seeker corpus. (Added later via
+  -- `ALTER TABLE documents ADD COLUMN session_id text;` on pre-existing DBs.)
+  session_id  text,
   created_at  timestamptz NOT NULL DEFAULT now()
 );
+
+CREATE INDEX IF NOT EXISTS documents_session_idx ON documents (session_id);
 
 CREATE TABLE IF NOT EXISTS chunks (
   id           serial PRIMARY KEY,

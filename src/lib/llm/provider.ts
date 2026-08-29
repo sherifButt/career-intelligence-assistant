@@ -22,6 +22,8 @@ export interface CompletionOptions {
   temperature?: number;
   /** Overrides LLM_MODEL for this call (e.g. a stronger judge model). */
   model?: string;
+  /** Hard output ceiling — bounds cost and defuses prompt-injection blowups. */
+  maxTokens?: number;
 }
 
 export interface LlmProvider {

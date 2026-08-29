@@ -258,12 +258,14 @@ const VERDICT_CLASSES = {
 
 // The three metrics — fit, skill gaps, experience alignment. Each carries its
 // own tooltip; the recruiter-lens risk sentence lives in the gaps tooltip.
-function MatchStats({
+export function MatchStats({
    analysis,
    onPrep,
 }: {
    analysis: JobAnalysis
-   onPrep: () => void
+   /** Job-seeker only: shows the interview-prep launcher on a "yes" verdict.
+    *  Omitted (recruiter mode) leaves that column empty. */
+   onPrep?: () => void
 }) {
    const gaps = gapCount(analysis)
    return (
@@ -371,7 +373,7 @@ function MatchStats({
             )}
             {/* Prep routes to the chat (scoped to this job) — the chat is
                 the answer surface; the panel only launches the question. */}
-            {analysis.apply === 'yes' ? (
+            {onPrep && analysis.apply === 'yes' ? (
                <Tooltip>
                   <TooltipTrigger
                      render={

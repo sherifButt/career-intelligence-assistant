@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { count, eq, sql } from "drizzle-orm";
+import { count, eq, isNull, sql } from "drizzle-orm";
 import { chunks, documents, getDb } from "@/lib/db";
 
 // Backs the context panel: which documents are in the corpus, how many
@@ -22,6 +22,8 @@ export async function GET() {
       })
       .from(documents)
       .leftJoin(chunks, eq(chunks.documentId, documents.id))
+      // Job-seeker corpus only — recruiter session uploads stay hidden here.
+      .where(isNull(documents.sessionId))
       .groupBy(documents.id)
       .orderBy(documents.name);
 

@@ -1,11 +1,12 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { chunks, documents, getDb, type JobAnalysis } from "@/lib/db";
 import { getLlmProvider } from "@/lib/llm/provider";
 import { estimateCostUSD } from "@/lib/observability/cost";
 
-// One recruiter-style screen per job, run at ingest time — the panel reads
-// a stored result instead of paying an LLM call per view. ~$0.0004 per job
-// with gpt-4o-mini.
+// One recruiter-style screen per job, run at ingest time — the panel reads a
+// stored result instead of paying an LLM call per view. Uses ANALYSIS_MODEL
+// (default gpt-4o): gpt-4o-mini clustered scores and misread evidence, so the
+// once-per-ingest screen pays for a stronger judge (see docs/PROGRESS.md).
 
 // Unanchored "give me a score" prompts cluster around 80-85 for any
 // plausible candidate (observed: a TypeScript-first CV scored the same 85 on
@@ -56,80 +57,127 @@ const MAX_CHARS = 20_000;
 // 3x a sub-cent cost.
 const SAMPLES = 3;
 
+/**
+ * The calibrated core: screen one résumé against one job. Direction-agnostic —
+ * job-seeker mode passes the primary résumé, recruiter mode passes each
+ * candidate. Returns the median-scored sample's analysis together with its
+ * PART 1 evidence text (why each must-have was judged), so callers can show
+ * the work. `samples` controls self-consistency (3 = stable, 2 = balanced for
+ * bulk screening).
+ */
+export async function screenFit(
+  resumeText: string,
+  jobText: string,
+  opts: { samples?: number } = {},
+): Promise<{ analysis: JobAnalysis; evidence: string } | null> {
+  const samples = Math.max(1, opts.samples ?? SAMPLES);
+
+  // Without today's date the model can't resolve "Oct 2019 – Present" and
+  // wrongly fails years-of-experience requirements.
+  const today = new Date().toISOString().slice(0, 10);
+  const messages = [
+    { role: "system" as const, content: SYSTEM_PROMPT },
+    {
+      role: "user" as const,
+      content: `Today's date: ${today}\n\nRÉSUMÉ:\n${resumeText.slice(0, MAX_CHARS)}\n\nJOB DESCRIPTION:\n${jobText.slice(0, MAX_CHARS)}`,
+    },
+  ];
+
+  const model = process.env.ANALYSIS_MODEL ?? "gpt-4o";
+  const provider = getLlmProvider();
+  const completions = await Promise.all(
+    Array.from({ length: samples }, () =>
+      provider.complete(messages, { temperature: 0, model }),
+    ),
+  );
+
+  const parsed = completions
+    .map((c) => ({
+      analysis: parseAnalysis(c.text),
+      evidence: extractEvidence(c.text),
+    }))
+    .filter(
+      (p): p is { analysis: JobAnalysis; evidence: string } =>
+        p.analysis !== null,
+    );
+
+  const tokensIn = completions.reduce((n, c) => n + c.tokensIn, 0);
+  const tokensOut = completions.reduce((n, c) => n + c.tokensOut, 0);
+  console.log(
+    JSON.stringify({
+      event: "job_analysis",
+      ok: parsed.length > 0,
+      samples: parsed.length,
+      scores: parsed.map((p) => p.analysis.matchScore),
+      tokensIn,
+      tokensOut,
+      estimatedCostUSD: estimateCostUSD(completions[0].model, tokensIn, tokensOut),
+    }),
+  );
+
+  if (parsed.length === 0) return null;
+  // The median-scored sample wins whole — score, evidence, and must-have count
+  // stay mutually consistent instead of being averaged into a chimera.
+  const sorted = [...parsed].sort(
+    (a, b) => a.analysis.matchScore - b.analysis.matchScore,
+  );
+  const winner = sorted[Math.floor(sorted.length / 2)];
+  return { analysis: { ...winner.analysis, evidence: winner.evidence }, evidence: winner.evidence };
+}
+
+/**
+ * Job-seeker direction: screen the (single primary) résumé against one job.
+ * Thin wrapper over screenFit — unchanged behavior for the existing flow.
+ * Evidence is dropped here (the job-seeker panel doesn't surface it).
+ */
 export async function analyzeJobFit(
   jobContent: string,
 ): Promise<JobAnalysis | null> {
   const resumeText = await getResumeText();
   // No résumé ingested yet → nothing to compare against.
   if (!resumeText) return null;
-
-  // Without today's date the model can't resolve "Oct 2019 – Present" and
-  // wrongly fails years-of-experience requirements (observed: "3+ years AI
-  // experience" flagged missing against a 6+ year AI-focused tenure).
-  const today = new Date().toISOString().slice(0, 10);
-  const messages = [
-    { role: "system" as const, content: SYSTEM_PROMPT },
-    {
-      role: "user" as const,
-      content: `Today's date: ${today}\n\nRÉSUMÉ:\n${resumeText.slice(0, MAX_CHARS)}\n\nJOB DESCRIPTION:\n${jobContent.slice(0, MAX_CHARS)}`,
-    },
-  ];
-
-  // The screen uses a stronger model than chat: gpt-4o-mini consistently
-  // failed evidence-reading (flagging "hands-on with agents" as missing
-  // against a CV describing built agent products) even with explicit rubric
-  // instructions. Screening runs once per job ingest, so ~3c for correct
-  // judgment beats ~0.2c for confidently wrong.
-  const model = process.env.ANALYSIS_MODEL ?? "gpt-4o";
-  const provider = getLlmProvider();
-  const completions = await Promise.all(
-    Array.from({ length: SAMPLES }, () =>
-      provider.complete(messages, { temperature: 0, model }),
-    ),
-  );
-
-  const samples = completions
-    .map((c) => parseAnalysis(c.text))
-    .filter((a): a is JobAnalysis => a !== null);
-
-  const tokensIn = completions.reduce((n, c) => n + c.tokensIn, 0);
-  const tokensOut = completions.reduce((n, c) => n + c.tokensOut, 0);
-  const analysis = samples.length > 0 ? medianAnalysis(samples) : null;
-  console.log(
-    JSON.stringify({
-      event: "job_analysis",
-      ok: analysis !== null,
-      samples: samples.length,
-      scores: samples.map((s) => s.matchScore),
-      tokensIn,
-      tokensOut,
-      estimatedCostUSD: estimateCostUSD(
-        completions[0].model,
-        tokensIn,
-        tokensOut,
-      ),
-    }),
-  );
+  const result = await screenFit(resumeText, jobContent);
+  if (!result) return null;
+  const { evidence: _evidence, ...analysis } = result.analysis;
   return analysis;
 }
 
-// The sample with the median score wins whole — score, note, and must-have
-// count stay mutually consistent instead of being averaged into a chimera.
-function medianAnalysis(samples: JobAnalysis[]): JobAnalysis {
-  const sorted = [...samples].sort((a, b) => a.matchScore - b.matchScore);
-  return sorted[Math.floor(sorted.length / 2)];
+// The PART 1 written analysis is everything before the final JSON object.
+export function extractEvidence(text: string): string {
+  const jsonStart = text.lastIndexOf("{");
+  const body = (jsonStart > 0 ? text.slice(0, jsonStart) : "").trim();
+  return body
+    .replace(/^\s*PART 1[^\n]*\n?/i, "")
+    .replace(/\n?\s*PART 2[^\n]*$/i, "")
+    .trim();
 }
 
-// The résumé as one text: its chunks in order. Chunk overlap duplicates a
-// little text, which is harmless for a screening read.
-async function getResumeText(): Promise<string | null> {
+/**
+ * A résumé as one text: its chunks in order. With an explicit documentId,
+ * that résumé; otherwise the PRIMARY résumé — the oldest shared-corpus
+ * (non-session) résumé. Concatenating every résumé doc was wrong once
+ * recruiter sessions add more than one.
+ */
+export async function getResumeText(
+  documentId?: number,
+): Promise<string | null> {
   const db = getDb();
+  let targetId = documentId;
+  if (targetId === undefined) {
+    const [primary] = await db
+      .select({ id: documents.id })
+      .from(documents)
+      .where(and(eq(documents.docType, "resume"), isNull(documents.sessionId)))
+      .orderBy(asc(documents.createdAt), asc(documents.id))
+      .limit(1);
+    if (!primary) return null;
+    targetId = primary.id;
+  }
   const rows = await db
     .select({ content: chunks.content })
     .from(chunks)
-    .innerJoin(documents, eq(chunks.documentId, documents.id))
-    .where(eq(documents.docType, "resume"))
-    .orderBy(asc(chunks.documentId), asc(chunks.chunkIndex));
+    .where(eq(chunks.documentId, targetId))
+    .orderBy(asc(chunks.chunkIndex));
   if (rows.length === 0) return null;
   return rows.map((r) => r.content).join("\n\n");
 }

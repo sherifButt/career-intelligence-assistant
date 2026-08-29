@@ -1,11 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Users } from "lucide-react";
 
 // Placeholder panel: multi-conversation support is out of scope for the
 // timebox, but the layout reserves its place. Every interaction says so
@@ -30,6 +31,14 @@ export function ChatsSidebar({
         <p className="text-xs text-muted-foreground">
           Résumé vs job descriptions, grounded answers
         </p>
+        <Link
+          href="/recruiter"
+          className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+        >
+          <Users className="size-3.5" />
+          Recruiter mode
+          <span aria-hidden>→</span>
+        </Link>
       </div>
       <Separator />
 

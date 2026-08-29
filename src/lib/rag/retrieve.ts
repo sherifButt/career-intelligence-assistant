@@ -1,4 +1,4 @@
-import { and, cosineDistance, desc, eq, sql } from "drizzle-orm";
+import { and, cosineDistance, desc, eq, isNull, sql } from "drizzle-orm";
 import { chunks, documents, getDb, type DocType } from "@/lib/db";
 import type { RetrievedChunk } from "@/lib/types";
 import { embedQuery } from "./embed";
@@ -64,6 +64,8 @@ export async function listJobDocuments(): Promise<
   return db
     .select({ id: documents.id, name: documents.name })
     .from(documents)
-    .where(eq(documents.docType, "job"))
+    // Shared corpus only — recruiter session jobs are never part of the
+    // job-seeker fan-out.
+    .where(and(eq(documents.docType, "job"), isNull(documents.sessionId)))
     .orderBy(documents.name);
 }
